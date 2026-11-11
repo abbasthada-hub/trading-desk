@@ -39,7 +39,21 @@
   "trend": {
    "checked": false
   },
-  "skipped": []
+  "skipped": [],
+  "leveraged": {
+   "UPRO": {
+    "decision": "hold",
+    "signal_from": "IVV",
+    "in_position": false,
+    "days_held": 0
+   },
+   "TQQQ": {
+    "decision": "hold",
+    "signal_from": "QQQ",
+    "in_position": false,
+    "days_held": 0
+   }
+  }
  },
  "positions": {},
  "status": "ok"
