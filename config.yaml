@@ -34,7 +34,8 @@ day_trade:                    # 5%: at most one trade a day, in the last half-ho
   weight: 0.05
   signal_symbol: SPY          # first half-hour move, measured from yesterday's close to 10:00
   long_symbol: VOO            # bought when the signal is up
-  short_symbol: SH            # bought when the signal is down (SH rises when the S&P 500 falls)
+  short_symbol: SH            # the inverse fund (rises when the S&P 500 falls); only used if the next line is true
+  trade_down_days: false      # false = buy-only: no trade on a down morning
   entry_time: "15:30"
   exit_time: "15:55"
   stop_loss_fraction: 0.20    # the piece is switched off once it has lost 20% of its allocation

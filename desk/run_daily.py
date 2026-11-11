@@ -158,7 +158,8 @@ def run(broker, cfg=None, today=None, root=ROOT, write=True) -> dict:
     equity = acct["equity"]
     lev_syms = {x for p in cfg.get("leveraged_sleeve", {}).get("pairs", []) for x in (p["signal"], p["trade"])}
     dt_syms = {cfg["day_trade"]["long_symbol"], cfg["day_trade"]["short_symbol"]} if "day_trade" in cfg else set()
-    symbols = sorted(set(cfg["trend_sleeve"]["symbols"]) | set(cfg["pullback_sleeve"]["symbols"]) | lev_syms)
+    # day-trade funds are priced too, so a position left open can be sold and passes the risk gates
+    symbols = sorted(set(cfg["trend_sleeve"]["symbols"]) | set(cfg["pullback_sleeve"]["symbols"]) | lev_syms | dt_syms)
     closes = broker.daily_closes(symbols, cfg["data"]["lookback_days"], tuple(cfg["data"]["feeds"]))
 
     stale = [s for s, c in closes.items() if c.index[-1].date() != today]
@@ -167,7 +168,7 @@ def run(broker, cfg=None, today=None, root=ROOT, write=True) -> dict:
         entry["errors"].append(entry["status"])
         return _finish(entry, root, write)
 
-    unknown = sorted(set(positions) - set(symbols) - dt_syms)
+    unknown = sorted(set(positions) - set(symbols))
     if unknown:
         entry["errors"].append("positions the desk does not manage: " + ", ".join(unknown))
 

@@ -2,8 +2,8 @@
 
 Rule (Gao, Han and Zhou, "Market intraday momentum"): the S&P 500's move from yesterday's close to 10:00
 tends to carry into the last half-hour. So, once a day at most:
-    up by 10:00   -> at 15:30 buy the long fund,  sell at 15:55
-    down by 10:00 -> at 15:30 buy the inverse fund, sell at 15:55
+    up by 10:00   -> at 15:30 buy the long fund, sell at 15:55
+    down by 10:00 -> no trade (unless trade_down_days is true: then buy the inverse fund for the same window)
 The piece is switched off once it has lost stop_loss_fraction of its allocation.
 """
 import datetime as dt
@@ -96,8 +96,10 @@ def run(broker, cfg=None, clock=None, sleep=time.sleep, selftest=False, root=ROO
     e.update({"signal_move": r1, "prev_close": prev, "price_at_10": p10})
     if r1 is None or r1 == 0:
         return done("no signal today")
-    sym = dc["long_symbol"] if r1 > 0 else dc["short_symbol"]
     e["direction"] = "up" if r1 > 0 else "down"
+    if r1 < 0 and not dc.get("trade_down_days", False):
+        return done("first half-hour was down: no trade today")
+    sym = dc["long_symbol"] if r1 > 0 else dc["short_symbol"]
 
     while clock() < t_in:
         sleep(min(20, max(1, (t_in - clock()).total_seconds())))

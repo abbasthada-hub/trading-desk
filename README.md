@@ -9,7 +9,7 @@ decides, and queues whole-share market orders that fill at the next open. Nobody
 | Momentum | 20% | 4 weeks at a time | The 3 strongest of the same 8 funds by 13/26/52-week return, if above their 40-week average. Re-ranked every 4 weeks. |
 | Dip-buying | 20%, 4 slots of 5%: IVV, QQQ, IWM, DIA | 2 to 10 trading days | Buy when the close is above the 200-day average and the 2-day RSI is below 10. Sell above the 5-day average, or after 10 trading days. |
 | Leveraged dip-buying | 15%, 2 slots of 7.5%: UPRO, TQQQ | 2 to 10 trading days | The same rule read on IVV and QQQ, traded in their 3x funds. |
-| Day trade | 5%: VOO or SH | 25 minutes | If SPY is up from yesterday's close at 10:00, buy VOO at 15:30 and sell at 15:55. If down, the same with SH. Switched off after losing 20% of its allocation. |
+| Day trade | 5%: VOO | 25 minutes | If SPY is up from yesterday's close at 10:00, buy VOO at 15:30 and sell at 15:55. If down, no trade. Switched off after losing 20% of its allocation. |
 
 Backtest numbers and their limits: `backtest/RESULTS_V2.md` (this split), `backtest/RESULTS.md` (the original two-piece desk
 and the tests behind each rule), `backtest/fx_test.py` (the forex tests that led to no forex piece).

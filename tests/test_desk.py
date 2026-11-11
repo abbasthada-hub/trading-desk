@@ -281,7 +281,10 @@ def test_day_trade():
     assert out["status"] == "ok" and [x["side"] for x in f] == ["buy", "sell"] and f[0]["symbol"] == "VOO"
     assert out["entry_time"] == "15:30:00" and out["exit_time"] == "15:55:00"
     assert f[0]["qty"] == 10 and abs(out["paper_result"] - 20.0) < 1e-6 and b.pos["VOO"] == 0
-    b, out = _intraday(cfg, (15, 5), -0.004)                       # down morning -> the inverse fund
+    b, out = _intraday(cfg, (15, 5), -0.004)                       # down morning -> no trade (buy-only default)
+    assert not b.fills and "down" in out["status"] and not out["errors"]
+    both = copy.deepcopy(cfg); both["day_trade"]["trade_down_days"] = True
+    b, out = _intraday(both, (15, 5), -0.004)                      # with the switch on -> the inverse fund
     assert b.fills[0]["symbol"] == "SH" and out["direction"] == "down" and b.pos["SH"] == 0
     b, out = _intraday(cfg, (15, 5), +0.004, live=False)           # practice mode: nothing sent, result logged
     assert not b.fills and out["paper_result"] == 20.0
@@ -295,6 +298,19 @@ def test_day_trade():
     assert not b.fills and "early close" in out["status"]
 
 
+def test_leftover_day_trade_is_sold():
+    """A day-trade position still open at night must be sold by the nightly job, not crash it."""
+    cfg = _cfg()
+    data = _data(cfg)
+    b = FakeBroker(data)
+    day = data["IVV"].index[400].date()
+    b.set_day(day)
+    b.pos[cfg["day_trade"]["long_symbol"]] = 5
+    out = run(b, cfg, today=day, root=tempfile.gettempdir(), write=False)
+    sells = [o for o in out["orders_sent"] if o["symbol"] == cfg["day_trade"]["long_symbol"]]
+    assert not out["errors"] and len(sells) == 1 and sells[0]["side"] == "sell" and sells[0]["qty"] == 5, out
+
+
 if __name__ == "__main__":
     test_rsi_extremes(); print("ok  RSI extremes and a hand-worked value")
     test_paper_only_guard(); print("ok  broker refuses any non-paper URL")
@@ -302,4 +318,5 @@ if __name__ == "__main__":
     test_risk_gates(); print("ok  risk gates: position cap, drawdown block, drawdown maths")
     test_halt_file_and_rerun(); print("ok  HALT file stops the desk; a repeat run adds no orders; closed days do nothing")
     n, g = test_leveraged_and_momentum(); print(f"ok  3x funds trade on the plain fund's signal; momentum picks changed {n} times, only in re-rank weeks; peak invested {g:.0%}")
-    test_day_trade(); print("ok  day trade: up and down signals, practice mode, late and early starts, loss limit, early close")
+    test_day_trade(); print("ok  day trade: buy-only by default, practice mode, late and early starts, loss limit, early close")
+    test_leftover_day_trade_is_sold(); print("ok  a day trade left open is sold by the nightly job")
