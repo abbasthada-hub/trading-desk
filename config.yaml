@@ -1,0 +1,30 @@
+# Desk configuration. Change values here, not in the code.
+account:
+  paper_only: true            # the broker adapter refuses any URL that is not Alpaca's paper endpoint
+  submit_orders: false        # false = dry run: decide and log, send nothing. Set true after the dry-run week.
+
+trend_sleeve:                 # holds weeks to months
+  weight: 0.60                # share of account equity
+  symbols: [SPY, EFA, EEM, VNQ, IEF, TLT, GLD, DBC]
+  sma_weeks: 40
+  drift_band: 0.25
+
+pullback_sleeve:              # holds 2 to 10 trading days
+  weight: 0.40
+  symbols: [IVV, QQQ, IWM, DIA]   # IVV, not SPY, so each account position belongs to exactly one sleeve
+  trend_days: 200
+  rsi_days: 2
+  rsi_entry: 10
+  exit_days: 5
+  max_hold_days: 10
+
+risk:
+  max_position_weight: 0.15   # no single holding above 15% of equity
+  max_gross_weight: 1.00      # never borrow
+  max_orders_per_run: 16
+  max_drawdown: 0.12          # at 12% below the equity peak: stop new entries, exits still run
+  max_daily_move: 0.25        # a one-day move larger than this is treated as bad data; the symbol is skipped
+
+data:
+  lookback_days: 420          # calendar days of daily bars to pull (needs 200 trading days and 40 weeks)
+  feeds: [sip, iex]           # try in order; the free plan may only allow iex

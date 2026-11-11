@@ -1,0 +1,39 @@
+name: Desk daily run
+
+on:
+  schedule:
+    - cron: "30 1 * * 2-6"     # 01:30 UTC Tue-Sat = Mon-Fri evening in New York, after the close
+  workflow_dispatch: {}        # lets you press "Run workflow" by hand
+
+permissions:
+  contents: write              # so the run can save its journal back to the repository
+
+concurrency:
+  group: desk-daily
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Offline checks
+        run: python -m tests.test_desk
+      - name: Daily run
+        env:
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+        run: python -m desk.run_daily
+      - name: Save journal and report
+        if: always()
+        run: |
+          git config user.name "desk-bot"
+          git config user.email "desk-bot@users.noreply.github.com"
+          git add journal reports
+          git diff --cached --quiet || git commit -m "Desk run $(date -u +%F)"
+          git push
