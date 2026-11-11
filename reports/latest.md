@@ -8,13 +8,18 @@ Last run: 2026-11-10 (dry-run)
 | Return since first run (2026-11-10) | +0.00% |
 | Deepest drawdown so far | 0.00% (model's 20-year worst: -10.9%) |
 | Trading days recorded | 1 |
-| Orders sent | 0 |
+| Orders sent | 4 |
 
 Fewer than 63 trading days recorded, so there is no 13-week comparison yet (1 of 63).
 
 ## Orders, last 15 runs
 
-None.
+| Date | Sleeve | Side | Shares | Symbol | Why | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-10 | tr | buy | 15 | SPY | new holding | dry-run |
+| 2026-11-10 | tr | buy | 47 | EFA | new holding | dry-run |
+| 2026-11-10 | tr | buy | 120 | VNQ | new holding | dry-run |
+| 2026-11-10 | tr | buy | 379 | DBC | new holding | dry-run |
 
 ## Day-trading piece
 

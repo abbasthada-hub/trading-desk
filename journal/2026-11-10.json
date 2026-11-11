@@ -1,14 +1,53 @@
 {
  "date": "2026-11-10",
  "mode": "dry-run",
- "orders_sent": [],
+ "orders_sent": [
+  {
+   "symbol": "SPY",
+   "qty": 15,
+   "side": "buy",
+   "sleeve": "tr",
+   "reason": "new holding",
+   "client_order_id": "tr-SPY-20261110-buy",
+   "ref_price": 749.92
+  },
+  {
+   "symbol": "EFA",
+   "qty": 47,
+   "side": "buy",
+   "sleeve": "tr",
+   "reason": "new holding",
+   "client_order_id": "tr-EFA-20261110-buy",
+   "ref_price": 104.36
+  },
+  {
+   "symbol": "VNQ",
+   "qty": 120,
+   "side": "buy",
+   "sleeve": "tr",
+   "reason": "new holding",
+   "client_order_id": "tr-VNQ-20261110-buy",
+   "ref_price": 97.08
+  },
+  {
+   "symbol": "DBC",
+   "qty": 379,
+   "side": "buy",
+   "sleeve": "tr",
+   "reason": "new holding",
+   "client_order_id": "tr-DBC-20261110-buy",
+   "ref_price": 30.76
+  }
+ ],
  "orders_rejected": [],
  "errors": [],
+ "weekly_check_reason": "catch-up: no completed weekly check on record since 2026-11-06 in dry-run mode",
+ "data_feed": "sip",
  "equity": 100000.0,
  "cash": 100000.0,
  "drawdown_from_peak": 0.0,
  "new_buying_blocked": false,
- "week_end_check": false,
+ "week_end_check": true,
  "decisions": {
   "pullback": {
    "IVV": {
@@ -37,7 +76,55 @@
    }
   },
   "trend": {
-   "checked": false
+   "checked": true,
+   "SPY": {
+    "trend_on": true,
+    "momentum_pick": true,
+    "current_weight": 0.0,
+    "target_weight": 0.1167
+   },
+   "EFA": {
+    "trend_on": true,
+    "momentum_pick": false,
+    "current_weight": 0.0,
+    "target_weight": 0.05
+   },
+   "EEM": {
+    "trend_on": false,
+    "momentum_pick": false,
+    "current_weight": 0.0,
+    "target_weight": 0.0
+   },
+   "VNQ": {
+    "trend_on": true,
+    "momentum_pick": true,
+    "current_weight": 0.0,
+    "target_weight": 0.1167
+   },
+   "IEF": {
+    "trend_on": false,
+    "momentum_pick": false,
+    "current_weight": 0.0,
+    "target_weight": 0.0
+   },
+   "TLT": {
+    "trend_on": false,
+    "momentum_pick": false,
+    "current_weight": 0.0,
+    "target_weight": 0.0
+   },
+   "GLD": {
+    "trend_on": false,
+    "momentum_pick": false,
+    "current_weight": 0.0,
+    "target_weight": 0.0
+   },
+   "DBC": {
+    "trend_on": true,
+    "momentum_pick": true,
+    "current_weight": 0.0,
+    "target_weight": 0.1167
+   }
   },
   "skipped": [],
   "leveraged": {
@@ -53,6 +140,13 @@
     "in_position": false,
     "days_held": 0
    }
+  },
+  "momentum": {
+   "holding": [
+    "DBC",
+    "SPY",
+    "VNQ"
+   ]
   }
  },
  "positions": {},
