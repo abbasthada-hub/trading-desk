@@ -60,6 +60,9 @@ class AlpacaPaper:
         return self._req("GET", f"{self.base}/v2/orders", params={"status": "open", "limit": 200})
 
     # --- calendar --------------------------------------------------------------------------
+    def is_market_open(self) -> bool:
+        return bool(self._req("GET", f"{self.base}/v2/clock").get("is_open"))
+
     def trading_days(self, start: dt.date, end: dt.date) -> list:
         cal = self._req("GET", f"{self.base}/v2/calendar", params={"start": str(start), "end": str(end)})
         return [dt.date.fromisoformat(c["date"]) for c in cal]
@@ -92,6 +95,7 @@ class AlpacaPaper:
                         s.index = pd.DatetimeIndex(s.index)
                         res[sym] = s
                 if len(res) == len(symbols):
+                    self.last_feed = feed
                     return res
                 last_err = BrokerError(f"feed {feed}: no bars for {sorted(set(symbols) - set(res))}")
             except BrokerError as e:

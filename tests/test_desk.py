@@ -62,6 +62,9 @@ class FakeBroker:
     def open_orders(self):
         return list(self.queue)
 
+    def is_market_open(self):
+        return getattr(self, "market_open", False)
+
     def trading_days(self, start, end):
         return [d.date() for d in next(iter(self.data.values())).index if start <= d.date() <= end]
 
@@ -311,6 +314,48 @@ def test_leftover_day_trade_is_sold():
     assert not out["errors"] and len(sells) == 1 and sells[0]["side"] == "sell" and sells[0]["qty"] == 5, out
 
 
+def test_hardening():
+    cfg = _cfg()
+    data = _data(cfg)
+    days = [d.date() for d in data["IVV"].index]
+    monday = [d for d in days[400:] if d.weekday() == 0][0]
+    tuesday = days[days.index(monday) + 1]
+    # 1. started by hand while the market is open -> nothing happens
+    b = FakeBroker(data); b.set_day(monday); b.market_open = True
+    out = run(b, cfg, today=monday, root=tempfile.mkdtemp(), write=True)
+    assert "market is open" in out["status"] and not b.queue
+    # 2. a run that breaks still writes a journal entry
+    b = FakeBroker(data); b.set_day(monday)
+    def boom(*a, **k):
+        raise RuntimeError("data service down")
+    b.daily_closes = boom
+    root = tempfile.mkdtemp()
+    out = run(b, cfg, today=monday, root=root, write=True)
+    assert out["status"].startswith("failed") and "data service down" in out["errors"][0] and not b.queue
+    assert os.path.exists(os.path.join(root, "journal", f"{monday}.json"))
+    # 3. no weekly check on record for last week -> made up on Monday, and not repeated on Tuesday
+    b = FakeBroker(data); b.set_day(monday)
+    root = tempfile.mkdtemp()
+    out = run(b, cfg, today=monday, root=root, write=True)
+    assert out["week_end_check"] and out["weekly_check_reason"].startswith("catch-up"), out.get("weekly_check_reason")
+    assert any(o["sleeve"] == "tr" for o in out["orders_sent"])
+    b.set_day(tuesday)
+    out = run(b, cfg, today=tuesday, root=root, write=True)
+    assert not out["week_end_check"]
+    #    ...but a switch from practice to live counts as a new start
+    live_off = copy.deepcopy(cfg); live_off["account"]["submit_orders"] = False
+    root = tempfile.mkdtemp()
+    b = FakeBroker(data); b.set_day(monday)
+    assert run(b, live_off, today=monday, root=root, write=True)["week_end_check"]
+    b.set_day(tuesday)
+    out = run(b, cfg, today=tuesday, root=root, write=True)
+    assert out["week_end_check"] and out["mode"] == "live-paper"
+    # 4. the day trade shrinks to the room left under the no-borrowing limit
+    px = float(data["SPY"]["close"].iloc[500])
+    b, out = _intraday(cfg, (15, 5), +0.004, cash=1000.0, pos={"SPY": int(99000 / px)})
+    assert out["status"] == "ok" and b.fills[0]["qty"] <= 2 and "budget_cut_to" in out, out
+
+
 if __name__ == "__main__":
     test_rsi_extremes(); print("ok  RSI extremes and a hand-worked value")
     test_paper_only_guard(); print("ok  broker refuses any non-paper URL")
@@ -320,3 +365,4 @@ if __name__ == "__main__":
     n, g = test_leveraged_and_momentum(); print(f"ok  3x funds trade on the plain fund's signal; momentum picks changed {n} times, only in re-rank weeks; peak invested {g:.0%}")
     test_day_trade(); print("ok  day trade: buy-only by default, practice mode, late and early starts, loss limit, early close")
     test_leftover_day_trade_is_sold(); print("ok  a day trade left open is sold by the nightly job")
+    test_hardening(); print("ok  mid-session start refused; failed run journaled; missed weekly check made up; day trade never borrows")

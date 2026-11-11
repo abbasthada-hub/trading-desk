@@ -91,6 +91,12 @@ def run(broker, cfg=None, clock=None, sleep=time.sleep, selftest=False, root=ROO
         return done("account drawdown limit reached: no new buying")
     if any(broker.positions().get(s, {}).get("qty", 0) > 0 for s in syms):
         return done("a day-trade position is already open: no new trade")
+    # never borrow: the day trade only uses room left under the account's exposure limit
+    held_value = sum(float(p.get("market_value", 0.0)) for p in broker.positions().values())
+    room = cfg["risk"]["max_gross_weight"] * equity - held_value
+    if room < budget:
+        e["budget_cut_to"] = round(max(room, 0.0), 2)
+        budget = max(room, 0.0)
 
     r1, prev, p10 = first_half_hour_signal(broker, dc["signal_symbol"], today)
     e.update({"signal_move": r1, "prev_close": prev, "price_at_10": p10})

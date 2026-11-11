@@ -47,6 +47,29 @@ def is_last_trading_day_of_week(today: dt.date, trading_days: list) -> bool:
     return (not later) or later[0].isocalendar()[:2] != today.isocalendar()[:2]
 
 
+def weekly_check_due(root: str, days: list, today, mode: str, use_journal: bool = True):
+    """(due, why). Due on the last trading day of the week. Also due when the most recent week-end
+    check is missing from the journal, failed, or was made in a different mode - so a skipped Friday run
+    is made up the next day, and the first live run sets up the weekly positions without waiting."""
+    if is_last_trading_day_of_week(today, days):
+        return True, "week end"
+    if not use_journal:
+        return False, ""
+    past = [d for d in days if d < today]
+    ends = [d for d in past if is_last_trading_day_of_week(d, days)]
+    if not ends:
+        return False, ""
+    for d in [x for x in past if x >= ends[-1]]:
+        try:
+            with open(os.path.join(root, "journal", f"{d}.json")) as fh:
+                j = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        if j.get("week_end_check") and j.get("mode") == mode and str(j.get("status", "")).startswith(("ok", "completed")):
+            return False, ""
+    return True, f"catch-up: no completed weekly check on record since {ends[-1]} in {mode} mode"
+
+
 def decide(cfg, equity, positions, closes, today, week_end, days_held_fn):
     """Pure decision step. Returns (orders, notes). An order is a dict: symbol, qty, side, sleeve, reason."""
     orders, notes = [], {"pullback": {}, "trend": {}, "skipped": []}
@@ -142,10 +165,23 @@ def run(broker, cfg=None, today=None, root=ROOT, write=True) -> dict:
     today = today or (dt.datetime.now(ZoneInfo("America/New_York")) - dt.timedelta(hours=9)).date()
     entry = {"date": str(today), "mode": "live-paper" if cfg["account"]["submit_orders"] else "dry-run",
              "orders_sent": [], "orders_rejected": [], "errors": []}
+    try:
+        return _run(broker, cfg, today, root, write, entry)
+    except Exception as e:                          # a failed run still leaves a journal entry
+        entry["errors"].append(f"{type(e).__name__}: {e}")
+        entry["status"] = "failed: the run stopped early"
+        return _finish(entry, root, write)
+
+
+def _run(broker, cfg, today, root, write, entry) -> dict:
 
     reason = risk.halt_reason(root, cfg)
     if reason:
         entry["status"] = f"halted: {reason}"
+        return _finish(entry, root, write)
+
+    if broker.is_market_open():                     # e.g. started by hand at midday: today's bar is unfinished
+        entry["status"] = "the market is open: the nightly job only runs after the close"
         return _finish(entry, root, write)
 
     days = broker.trading_days(today - dt.timedelta(days=10), today + dt.timedelta(days=10))
@@ -176,7 +212,7 @@ def run(broker, cfg=None, today=None, root=ROOT, write=True) -> dict:
         d0 = broker.last_buy_fill_date(sym)
         return int((c.index.date > d0).sum()) if d0 else cfg["pullback_sleeve"]["max_hold_days"]
 
-    week_end = is_last_trading_day_of_week(today, days)
+    week_end, why = weekly_check_due(root, days, today, entry["mode"], use_journal=write)
     orders, notes, prices = decide(cfg, equity, positions, closes, today, week_end, days_held)
     waiting = {o["symbol"] for o in broker.open_orders()}       # an earlier order has not filled yet
     if waiting:
@@ -187,6 +223,7 @@ def run(broker, cfg=None, today=None, root=ROOT, write=True) -> dict:
     blocked = dd <= -cfg["risk"]["max_drawdown"]
     ok, rejected = risk.apply_limits(orders, positions, prices, equity, cfg["risk"], blocked)
 
+    entry.update({"weekly_check_reason": why, "data_feed": getattr(broker, "last_feed", None)})
     entry.update({"equity": equity, "cash": acct["cash"], "drawdown_from_peak": round(dd, 4),
                   "new_buying_blocked": blocked, "week_end_check": week_end, "decisions": notes,
                   "positions": {s: p["qty"] for s, p in positions.items()}, "orders_rejected": rejected})
