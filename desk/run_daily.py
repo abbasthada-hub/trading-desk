@@ -19,7 +19,8 @@ from zoneinfo import ZoneInfo
 import yaml
 
 from . import risk
-from .strategy import PullbackParams, TrendParams, pullback_decision, trend_targets, needs_resize
+from .strategy import (PullbackParams, TrendParams, pullback_decision, trend_targets, needs_resize,
+                       momentum_targets)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -27,11 +28,17 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def load_config(path=None) -> dict:
     with open(path or os.path.join(ROOT, "config.yaml")) as fh:
         cfg = yaml.safe_load(fh)
-    both = set(cfg["trend_sleeve"]["symbols"]) & set(cfg["pullback_sleeve"]["symbols"])
-    if both:
-        raise ValueError(f"A symbol cannot be in both sleeves: {sorted(both)}")
-    if cfg["trend_sleeve"]["weight"] + cfg["pullback_sleeve"]["weight"] > 1.0 + 1e-9:
-        raise ValueError("Sleeve weights add up to more than 100% of the account.")
+    groups = [cfg["trend_sleeve"]["symbols"], cfg["pullback_sleeve"]["symbols"],
+              [p["trade"] for p in cfg.get("leveraged_sleeve", {}).get("pairs", [])],
+              [cfg["day_trade"]["long_symbol"], cfg["day_trade"]["short_symbol"]] if "day_trade" in cfg else []]
+    flat = [s for g in groups for s in g]
+    dup = sorted({s for s in flat if flat.count(s) > 1})
+    if dup:
+        raise ValueError(f"Each traded symbol must belong to one piece of the desk only: {dup}")
+    total = sum(cfg.get(k, {}).get("weight", 0.0) for k in
+                ("trend_sleeve", "momentum_sleeve", "pullback_sleeve", "leveraged_sleeve", "day_trade"))
+    if total > 1.0 + 1e-9:
+        raise ValueError(f"The pieces add up to {total:.0%} of the account, which is more than 100%.")
     return cfg
 
 
@@ -68,8 +75,38 @@ def decide(cfg, equity, positions, closes, today, week_end, days_held_fn):
             orders.append({"symbol": sym, "qty": int(held), "side": "sell", "sleeve": "pb",
                            "reason": "time stop" if days >= pp.max_hold_days else "closed above short average"})
 
-    # ---- trend sleeve (weekly)
+    # ---- leveraged sleeve: the dip rule read on the plain fund, traded in its 3x fund
+    lc = cfg.get("leveraged_sleeve", {})
+    notes["leveraged"] = {}
+    for pair in lc.get("pairs", []):
+        sig, trd = pair["signal"], pair["trade"]
+        c = closes[sig]
+        if risk.bad_data(c, rk["max_daily_move"]):
+            continue
+        held = positions.get(trd, {}).get("qty", 0.0)
+        in_pos = held > 0
+        days = days_held_fn(trd, c) if in_pos else 0
+        d = pullback_decision(c, in_pos, days, pp)
+        notes["leveraged"][trd] = {"decision": d, "signal_from": sig, "in_position": in_pos, "days_held": days}
+        if d == "enter":
+            qty = math.floor(lc["weight"] / len(lc["pairs"]) * equity / prices[trd])
+            if qty > 0:
+                orders.append({"symbol": trd, "qty": qty, "side": "buy", "sleeve": "lv", "reason": "leveraged pullback entry"})
+        elif d == "exit":
+            orders.append({"symbol": trd, "qty": int(held), "side": "sell", "sleeve": "lv",
+                           "reason": "time stop" if days >= pp.max_hold_days else "closed above short average"})
+
+    # ---- anything left over from the day-trading piece is sold at the next open
+    dt_cfg = cfg.get("day_trade", {})
+    for sym in (dt_cfg.get("long_symbol"), dt_cfg.get("short_symbol")):
+        held = positions.get(sym, {}).get("qty", 0.0) if sym else 0.0
+        if held > 0:
+            orders.append({"symbol": sym, "qty": int(held), "side": "sell", "sleeve": "dt", "reason": "left over from day trade"})
+            notes["skipped"].append(f"{sym}: a day-trade position was still open at the close")
+
+    # ---- trend and momentum sleeves (weekly). Both hold the same 8 funds, so their targets are added up.
     tc = cfg["trend_sleeve"]
+    mc = cfg.get("momentum_sleeve", {"weight": 0.0, "top_n": 3, "rerank_every_weeks": 4})
     tp = TrendParams(tc["sma_weeks"], tc["drift_band"])
     notes["trend"]["checked"] = bool(week_end)
     if week_end:
@@ -77,20 +114,24 @@ def decide(cfg, equity, positions, closes, today, week_end, days_held_fn):
         for s in set(tc["symbols"]) - set(tcloses):
             notes["skipped"].append(f"{s}: one-day move above {rk['max_daily_move']:.0%}, treated as bad data")
         n_all = len(tc["symbols"])
-        targets = {s: (tc["weight"] / n_all if w > 0 else 0.0)
-                   for s, w in trend_targets(tcloses, tp, 1.0).items()}
-        for sym, tw in targets.items():
+        t_tgt = {s: (tc["weight"] / n_all if w > 0 else 0.0) for s, w in trend_targets(tcloses, tp, 1.0).items()}
+        m_tgt = momentum_targets(tcloses, today, mc["weight"], mc["top_n"], mc["rerank_every_weeks"], tc["sma_weeks"]) \
+            if mc["weight"] > 0 else {}
+        notes["momentum"] = {"holding": sorted(s for s, w in m_tgt.items() if w > 0)}
+        for sym in tcloses:
+            tw = t_tgt.get(sym, 0.0) + m_tgt.get(sym, 0.0)
             held = positions.get(sym, {}).get("qty", 0.0)
             cw = held * prices[sym] / equity
-            notes["trend"][sym] = {"on": tw > 0, "current_weight": round(cw, 4), "target_weight": round(tw, 4)}
+            notes["trend"][sym] = {"trend_on": t_tgt.get(sym, 0.0) > 0, "momentum_pick": m_tgt.get(sym, 0.0) > 0,
+                                   "current_weight": round(cw, 4), "target_weight": round(tw, 4)}
             if needs_resize(cw, tw, tp.drift_band):
                 diff = math.floor(tw * equity / prices[sym]) - int(held)
                 if diff > 0:
                     orders.append({"symbol": sym, "qty": diff, "side": "buy", "sleeve": "tr",
-                                   "reason": "trend on" if held == 0 else "resize up"})
+                                   "reason": "new holding" if held == 0 else "resize up"})
                 elif diff < 0:
                     orders.append({"symbol": sym, "qty": -diff, "side": "sell", "sleeve": "tr",
-                                   "reason": "trend off" if tw == 0 else "resize down"})
+                                   "reason": "sold out" if tw == 0 else "resize down"})
     return orders, notes, prices
 
 
@@ -115,7 +156,9 @@ def run(broker, cfg=None, today=None, root=ROOT, write=True) -> dict:
     acct = broker.account()
     positions = broker.positions()
     equity = acct["equity"]
-    symbols = sorted(set(cfg["trend_sleeve"]["symbols"]) | set(cfg["pullback_sleeve"]["symbols"]))
+    lev_syms = {x for p in cfg.get("leveraged_sleeve", {}).get("pairs", []) for x in (p["signal"], p["trade"])}
+    dt_syms = {cfg["day_trade"]["long_symbol"], cfg["day_trade"]["short_symbol"]} if "day_trade" in cfg else set()
+    symbols = sorted(set(cfg["trend_sleeve"]["symbols"]) | set(cfg["pullback_sleeve"]["symbols"]) | lev_syms)
     closes = broker.daily_closes(symbols, cfg["data"]["lookback_days"], tuple(cfg["data"]["feeds"]))
 
     stale = [s for s, c in closes.items() if c.index[-1].date() != today]
@@ -124,7 +167,7 @@ def run(broker, cfg=None, today=None, root=ROOT, write=True) -> dict:
         entry["errors"].append(entry["status"])
         return _finish(entry, root, write)
 
-    unknown = sorted(set(positions) - set(symbols))
+    unknown = sorted(set(positions) - set(symbols) - dt_syms)
     if unknown:
         entry["errors"].append("positions the desk does not manage: " + ", ".join(unknown))
 

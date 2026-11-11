@@ -1,30 +1,51 @@
-# Desk configuration. Change values here, not in the code.
+# Desk configuration, version 2 (the split agreed on 11 Nov 2026). Change values here, not in the code.
 account:
   paper_only: true            # the broker adapter refuses any URL that is not Alpaca's paper endpoint
-  submit_orders: false        # false = dry run: decide and log, send nothing. Set true after the dry-run week.
+  submit_orders: false        # false = practice mode: decide and log, send nothing
 
-trend_sleeve:                 # holds weeks to months
-  weight: 0.60                # share of account equity
+trend_sleeve:                 # 40%: 8 slices of 5%, each invested while its fund is in an uptrend
+  weight: 0.40
   symbols: [SPY, EFA, EEM, VNQ, IEF, TLT, GLD, DBC]
   sma_weeks: 40
   drift_band: 0.25
 
-pullback_sleeve:              # holds 2 to 10 trading days
-  weight: 0.40
-  symbols: [IVV, QQQ, IWM, DIA]   # IVV, not SPY, so each account position belongs to exactly one sleeve
+momentum_sleeve:              # 20%: the 3 strongest of the trend funds, re-ranked every 4 weeks
+  weight: 0.20
+  top_n: 3
+  rerank_every_weeks: 4
+
+pullback_sleeve:              # 20%: 4 slots of 5%, dip-buying, held 2 to 10 trading days
+  weight: 0.20
+  symbols: [IVV, QQQ, IWM, DIA]
   trend_days: 200
   rsi_days: 2
   rsi_entry: 10
   exit_days: 5
   max_hold_days: 10
 
+leveraged_sleeve:             # 15%: same dip rule, read on the plain fund, traded in its 3x fund
+  weight: 0.15
+  pairs:
+    - {signal: IVV, trade: UPRO}
+    - {signal: QQQ, trade: TQQQ}
+
+day_trade:                    # 5%: at most one trade a day, in the last half-hour
+  enabled: true
+  weight: 0.05
+  signal_symbol: SPY          # first half-hour move, measured from yesterday's close to 10:00
+  long_symbol: VOO            # bought when the signal is up
+  short_symbol: SH            # bought when the signal is down (SH rises when the S&P 500 falls)
+  entry_time: "15:30"
+  exit_time: "15:55"
+  stop_loss_fraction: 0.20    # the piece is switched off once it has lost 20% of its allocation
+
 risk:
-  max_position_weight: 0.15   # no single holding above 15% of equity
-  max_gross_weight: 1.00      # never borrow
-  max_orders_per_run: 16
-  max_drawdown: 0.12          # at 12% below the equity peak: stop new entries, exits still run
-  max_daily_move: 0.25        # a one-day move larger than this is treated as bad data; the symbol is skipped
+  max_position_weight: 0.15
+  max_gross_weight: 1.00
+  max_orders_per_run: 20
+  max_drawdown: 0.15          # the backtest's worst was 10.9%
+  max_daily_move: 0.25
 
 data:
-  lookback_days: 420          # calendar days of daily bars to pull (needs 200 trading days and 40 weeks)
-  feeds: [sip, iex]           # try in order; the free plan may only allow iex
+  lookback_days: 480          # needs 200 trading days, and 52 weeks before the last re-rank
+  feeds: [sip, iex]

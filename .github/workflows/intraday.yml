@@ -1,0 +1,44 @@
+name: Desk day trade
+
+on:
+  schedule:
+    - cron: "5 19 * * 1-5"     # 15:05 New York in summer
+    - cron: "5 20 * * 1-5"     # 15:05 New York in winter. The run that lands at the wrong hour exits at once.
+  workflow_dispatch:
+    inputs:
+      selftest:
+        description: "Only check the data connections; send nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desk-intraday
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Day trade
+        env:
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+        run: python -m desk.run_intraday ${{ (github.event_name == 'workflow_dispatch' && inputs.selftest) && '--selftest' || '' }}
+      - name: Save journal
+        if: always()
+        run: |
+          git config user.name "desk-bot"
+          git config user.email "desk-bot@users.noreply.github.com"
+          git add journal
+          git diff --cached --quiet || git commit -m "Day trade $(date -u +%F)"
+          git pull --rebase -q origin main
+          git push

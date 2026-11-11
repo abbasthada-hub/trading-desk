@@ -3,25 +3,30 @@
 Two rule sets run side by side on an Alpaca paper account. A scheduled job runs each weekday evening,
 decides, and queues whole-share market orders that fill at the next open. Nobody has to be at a screen.
 
-| Sleeve | Share of account | Holds | Rule |
+| Piece | Share | Holds | Rule |
 | --- | --- | --- | --- |
-| Trend | 60% in 8 equal slices: SPY, EFA, EEM, VNQ, IEF, TLT, GLD, DBC | Weeks to months | A slice is invested while its ETF's weekly close is above its 40-week average, otherwise cash. Checked on the last trading day of each week. |
-| Pullback | 40% in 4 slots: IVV, QQQ, IWM, DIA | 2 to 10 trading days | Buy when the close is above the 200-day average and the 2-day RSI is below 10. Sell when the close is above the 5-day average, or after 10 trading days. |
+| Trend | 40%, 8 slices of 5%: SPY, EFA, EEM, VNQ, IEF, TLT, GLD, DBC | Weeks to months | A slice is invested while its fund's weekly close is above its 40-week average. Checked on the last trading day of each week. |
+| Momentum | 20% | 4 weeks at a time | The 3 strongest of the same 8 funds by 13/26/52-week return, if above their 40-week average. Re-ranked every 4 weeks. |
+| Dip-buying | 20%, 4 slots of 5%: IVV, QQQ, IWM, DIA | 2 to 10 trading days | Buy when the close is above the 200-day average and the 2-day RSI is below 10. Sell above the 5-day average, or after 10 trading days. |
+| Leveraged dip-buying | 15%, 2 slots of 7.5%: UPRO, TQQQ | 2 to 10 trading days | The same rule read on IVV and QQQ, traded in their 3x funds. |
+| Day trade | 5%: VOO or SH | 25 minutes | If SPY is up from yesterday's close at 10:00, buy VOO at 15:30 and sell at 15:55. If down, the same with SH. Switched off after losing 20% of its allocation. |
 
-Backtest numbers and their limits are in `backtest/RESULTS.md`.
+Backtest numbers and their limits: `backtest/RESULTS_V2.md` (this split), `backtest/RESULTS.md` (the original two-piece desk
+and the tests behind each rule), `backtest/fx_test.py` (the forex tests that led to no forex piece).
 
 ## Files
 
     config.yaml               every setting: symbols, weights, risk limits, dry-run switch
     desk/strategy.py          the rules (shared by the backtest and the live job)
-    desk/run_daily.py         the daily job
+    desk/run_daily.py         the nightly job (trend, momentum, dip-buying, leveraged dip-buying)
+    desk/run_intraday.py      the afternoon job (day trade)
     desk/risk.py              risk gates and the off switch
     desk/broker.py            Alpaca adapter; refuses anything except the paper URL
     desk/report.py            writes reports/latest.md
     desk/check.py             connection check, sends no orders
     backtest/                 research backtest, data and results
     tests/test_desk.py        offline checks, including "live job reproduces the backtest's trades"
-    .github/workflows/        the evening schedule
+    .github/workflows/        the evening and afternoon schedules
     journal/, reports/        written by each run
 
 ## Setup

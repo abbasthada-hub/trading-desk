@@ -5,10 +5,14 @@ import os
 
 import pandas as pd
 
-# From the 20-year backtest of the same rules (backtest/RESULTS.md): rolling 13-week desk returns.
-MODEL_13W = {"p05": -0.025, "median": 0.009, "p95": 0.050}
-MODEL_MAX_DD = -0.087
-
+# Expected ranges come from the backtest of the current split (backtest/model.json, written by backtest/v2.py).
+_HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+try:
+    _m = json.load(open(os.path.join(_HERE, "backtest", "model.json")))
+except Exception:
+    _m = {"p05": -0.034, "median": 0.015, "p95": 0.062, "max_dd": -0.109}
+MODEL_13W = {"p05": _m["p05"], "median": _m["median"], "p95": _m["p95"]}
+MODEL_MAX_DD = _m["max_dd"]
 
 def write_report(root: str) -> str:
     jd = os.path.join(root, "journal")
@@ -50,6 +54,14 @@ def write_report(root: str) -> str:
     lines += ["## Orders, last 15 runs", ""]
     lines += (["| Date | Sleeve | Side | Shares | Symbol | Why | Status |", "| --- | --- | --- | --- | --- | --- | --- |"]
               + rows) if rows else ["None."]
+    dt_path = os.path.join(jd, "daytrade.csv")
+    lines += ["", "## Day-trading piece", ""]
+    if os.path.exists(dt_path):
+        d = pd.read_csv(dt_path)
+        lines += [f"{len(d)} trades logged, {int((d['paper_result'] > 0).sum())} winners, total {d['paper_result'].sum():+,.2f} dollars "
+                  f"(reference prices, before any difference in fills)."]
+    else:
+        lines += ["No day trades logged yet."]
     lines += ["", "## Things to look at", ""] + (problems if problems else ["Nothing flagged."])
     out = os.path.join(root, "reports", "latest.md")
     os.makedirs(os.path.dirname(out), exist_ok=True)

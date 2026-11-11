@@ -98,6 +98,40 @@ class AlpacaPaper:
                 last_err = e
         raise last_err
 
+    # --- intraday helpers (day-trading piece) ------------------------------------------------
+    def calendar_day(self, day: dt.date):
+        """{'open': 'HH:MM', 'close': 'HH:MM'} for a trading day, or None when the market is closed."""
+        cal = self._req("GET", f"{self.base}/v2/calendar", params={"start": str(day), "end": str(day)})
+        for c in cal:
+            if c["date"] == str(day):
+                return {"open": c["open"], "close": c["close"]}
+        return None
+
+    def minute_closes(self, symbol: str, start_utc: dt.datetime, end_utc: dt.datetime, feed: str = "iex") -> pd.Series:
+        j = self._req("GET", f"{DATA_URL}/v2/stocks/bars",
+                      params={"symbols": symbol, "timeframe": "1Min", "feed": feed, "limit": 10000,
+                              "start": start_utc.strftime("%Y-%m-%dT%H:%M:%SZ"), "end": end_utc.strftime("%Y-%m-%dT%H:%M:%SZ")})
+        bars = (j.get("bars") or {}).get(symbol, [])
+        return pd.Series({pd.Timestamp(b["t"]).tz_convert("America/New_York"): float(b["c"]) for b in bars}, dtype=float)
+
+    def latest_price(self, symbol: str, feed: str = "iex") -> float:
+        j = self._req("GET", f"{DATA_URL}/v2/stocks/trades/latest", params={"symbols": symbol, "feed": feed})
+        return float(j["trades"][symbol]["p"])
+
+    def cancel_order(self, order_id: str):
+        self.s.request("DELETE", f"{self.base}/v2/orders/{order_id}", timeout=self.timeout)
+
+    def realized_pnl(self, symbols: list, id_prefix: str) -> float:
+        """Cash result of all filled orders whose client_order_id starts with id_prefix (sells minus buys)."""
+        orders = self._req("GET", f"{self.base}/v2/orders",
+                           params={"status": "closed", "symbols": ",".join(symbols), "limit": 500, "direction": "desc"})
+        total = 0.0
+        for o in orders:
+            if str(o.get("client_order_id", "")).startswith(id_prefix) and o.get("filled_avg_price"):
+                v = float(o["filled_qty"]) * float(o["filled_avg_price"])
+                total += v if o["side"] == "sell" else -v
+        return total
+
     # --- orders ----------------------------------------------------------------------------
     def submit_market_order(self, symbol: str, qty: int, side: str, client_order_id: str) -> dict:
         """Whole-share market order, good for the day. Sent in the evening, it queues for the next open.

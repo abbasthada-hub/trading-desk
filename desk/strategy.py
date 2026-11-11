@@ -73,3 +73,48 @@ def needs_resize(current_w: float, target_w: float, band: float) -> bool:
     if current_w == 0.0:
         return True
     return abs(current_w - target_w) > band * target_w
+
+
+# ----------------------------------------------------------------------------- momentum sleeve
+import datetime as _dt
+
+MOMENTUM_WEEKS = (13, 26, 52)
+RERANK_EPOCH = _dt.date(2026, 1, 2)      # a Friday; re-rank weeks are counted from here
+
+
+def week_friday(d: _dt.date) -> _dt.date:
+    return d + _dt.timedelta(days=4 - d.weekday())
+
+
+def rerank_due(d: _dt.date, every_weeks: int = 4) -> bool:
+    """True when the week containing d is a re-rank week. Depends only on the calendar."""
+    return ((week_friday(d) - RERANK_EPOCH).days // 7) % every_weeks == 0
+
+
+def last_rerank_friday(d: _dt.date, every_weeks: int = 4) -> _dt.date:
+    f = week_friday(d)
+    while not rerank_due(f, every_weeks):
+        f -= _dt.timedelta(days=7)
+    return f
+
+
+def momentum_picks_weekly(w: pd.DataFrame, n: int = 3, sma_weeks: int = 40) -> list:
+    """w: weekly closes, one column per fund, last row = the re-rank week.
+    Score = average of the 13-, 26- and 52-week returns. Keep the top n, and of those
+    only the ones above their own weekly average. Returns the symbols to hold."""
+    if len(w) < max(MOMENTUM_WEEKS) + 1:
+        return []
+    score = sum(w.iloc[-1] / w.iloc[-1 - k] - 1 for k in MOMENTUM_WEEKS) / len(MOMENTUM_WEEKS)
+    above = w.iloc[-1] > w.iloc[-sma_weeks:].mean()
+    top = score.sort_values(ascending=False, kind="mergesort").index[:n]
+    return [s for s in top if bool(above[s])]
+
+
+def momentum_targets(closes: dict, today: _dt.date, sleeve_weight: float, n: int = 3,
+                     every_weeks: int = 4, sma_weeks: int = 40) -> dict:
+    """Target weight per fund from the momentum sleeve, as decided at the most recent re-rank week.
+    Recomputed from prices each time, so no stored state is needed."""
+    cutoff = pd.Timestamp(last_rerank_friday(today, every_weeks))
+    w = pd.DataFrame({s: weekly_closes(c[c.index <= cutoff]) for s, c in closes.items()}).dropna()
+    picks = momentum_picks_weekly(w, n, sma_weeks)
+    return {s: (sleeve_weight / n if s in picks else 0.0) for s in closes}

@@ -12,6 +12,8 @@ from desk import risk
 from desk.broker import AlpacaPaper, BrokerError
 from desk.indicators import rsi_wilder
 from desk.run_daily import load_config, run
+from desk import run_intraday
+from desk.strategy import rerank_due
 from desk.strategy import PullbackParams
 
 
@@ -70,8 +72,34 @@ class FakeBroker:
         if client_order_id in self.ids:
             raise BrokerError("duplicate client_order_id")
         self.ids.add(client_order_id)
-        self.queue.append({"symbol": symbol, "qty": qty, "side": side, "client_order_id": client_order_id})
+        o = {"symbol": symbol, "qty": qty, "side": side, "client_order_id": client_order_id}
+        if getattr(self, "instant", False):                    # intraday: fill now at the latest price
+            px = self.latest_price(symbol)
+            q = qty if side == "buy" else -qty
+            self.pos[symbol] = self.pos.get(symbol, 0) + q
+            self.cash -= q * px
+            self.fills.append({**o, "date": self.today, "price": px})
+        else:
+            self.queue.append(o)
         return {"id": "fake-" + client_order_id, "status": "accepted"}
+
+    # intraday helpers
+    def calendar_day(self, day):
+        return getattr(self, "cal", {"open": "09:30", "close": "16:00"})
+
+    def minute_closes(self, symbol, start_utc, end_utc, feed="iex"):
+        t = pd.Timestamp(dt.datetime.combine(self.today, dt.time(9, 59)), tz="America/New_York")
+        return pd.Series({t: self.price_at_10})
+
+    def latest_price(self, symbol, feed="iex"):
+        return self.live_px[symbol](self.clock())
+
+    def cancel_order(self, order_id):
+        pass
+
+    def realized_pnl(self, symbols, id_prefix):
+        return sum((f["qty"] * f["price"]) * (1 if f["side"] == "sell" else -1)
+                   for f in self.fills if f["client_order_id"].startswith(id_prefix)) + getattr(self, "past_pnl", 0.0)
 
 
 def test_rsi_extremes():
@@ -96,12 +124,22 @@ def test_paper_only_guard():
 def _cfg():
     cfg = copy.deepcopy(load_config())
     cfg["account"]["submit_orders"] = True
+    cfg["risk"]["max_drawdown"] = 0.99          # these tests check the rules, not the drawdown stop
     return cfg
 
 
 def _data(cfg):
     syms = cfg["trend_sleeve"]["symbols"] + cfg["pullback_sleeve"]["symbols"]
-    return {s: make_prices(i + 1) for i, s in enumerate(syms)}
+    data = {s: make_prices(i + 1) for i, s in enumerate(syms)}
+    for pair in cfg["leveraged_sleeve"]["pairs"]:                 # a 3x fund: three times the plain fund's daily move
+        base = data[pair["signal"]]
+        r = base["close"].pct_change().fillna(0) * 3
+        c = 50 * (1 + r).cumprod()
+        o = c.shift().fillna(c.iloc[0]) * (1 + 3 * (base["open"] / base["close"].shift().fillna(base["open"]) - 1))
+        data[pair["trade"]] = pd.DataFrame({"open": o, "high": np.maximum(o, c), "low": np.minimum(o, c), "close": c})
+    for i, s_ in enumerate((cfg["day_trade"]["signal_symbol"], cfg["day_trade"]["long_symbol"], cfg["day_trade"]["short_symbol"])):
+        data.setdefault(s_, make_prices(90 + i))
+    return data
 
 
 def test_live_matches_backtest():
@@ -177,9 +215,91 @@ def test_halt_file_and_rerun():
     assert run(b, cfg, today=sat, root=tempfile.gettempdir(), write=False)["status"].startswith("market was closed")
 
 
+def test_leveraged_and_momentum():
+    """3x funds are bought and sold on the plain fund's signal; momentum picks change only in re-rank weeks."""
+    cfg = _cfg()
+    data = _data(cfg)
+    b = FakeBroker(data)
+    days = [d.date() for d in data["IVV"].index]
+    picks, max_w, max_gross = {}, 0.0, 0.0
+    for d in days[330:]:
+        b.set_day(d)
+        out = run(b, cfg, today=d, root=tempfile.gettempdir(), write=False)
+        assert not out["errors"], out["errors"]
+        assert not out["orders_rejected"], out["orders_rejected"]
+        if out["week_end_check"]:
+            picks[d] = tuple(out["decisions"]["momentum"]["holding"])
+        eq = out["equity"]
+        vals = [q * float(data[s].loc[pd.Timestamp(d), "close"]) for s, q in b.pos.items() if q]
+        max_w, max_gross = max(max_w, max(vals, default=0) / eq), max(max_gross, sum(vals) / eq)
+    for pair in cfg["leveraged_sleeve"]["pairs"]:
+        sig = [f["date"] for f in b.fills if f["symbol"] == pair["signal"] and f["side"] == "buy"]
+        lev = [f["date"] for f in b.fills if f["symbol"] == pair["trade"] and f["side"] == "buy"]
+        assert sig == lev and len(lev) > 5, (pair, sig[:4], lev[:4])
+        sig_s = [f["date"] for f in b.fills if f["symbol"] == pair["signal"] and f["side"] == "sell"]
+        lev_s = [f["date"] for f in b.fills if f["symbol"] == pair["trade"] and f["side"] == "sell"]
+        assert sig_s == lev_s
+    wk = sorted(picks)
+    changes = [d for a, d in zip(wk, wk[1:]) if picks[a] != picks[d]]
+    assert changes and all(rerank_due(d) for d in changes), [str(c) for c in changes if not rerank_due(c)]
+    assert all(len(p) <= cfg["momentum_sleeve"]["top_n"] for p in picks.values())
+    assert max_w <= cfg["risk"]["max_position_weight"] * 1.3, max_w      # 11.7% target plus drift
+    assert max_gross <= 1.0 + 1e-6 and b.cash > -1.0, (max_gross, b.cash)
+    return len(changes), round(max_gross, 3)
+
+
+class Clock:
+    def __init__(self, start):
+        self.t = start
+    def __call__(self):
+        return self.t
+    def sleep(self, seconds):
+        self.t += dt.timedelta(seconds=seconds)
+
+
+def _intraday(cfg, start_hhmm, move, live=True, **attrs):
+    data = _data(cfg)
+    day = data["SPY"].index[500].date()
+    ny = run_intraday.NY
+    clock = Clock(dt.datetime.combine(day, dt.time(*start_hhmm), tzinfo=ny))
+    b = FakeBroker(data); b.set_day(day); b.instant = True; b.clock = clock
+    prev = float(data["SPY"]["close"].iloc[499])
+    b.price_at_10 = prev * (1 + move)
+    t0 = dt.datetime.combine(day, dt.time(15, 30), tzinfo=ny)
+    b.live_px = {"VOO": lambda t: 500.0 + 2.0 * max(0.0, (t - t0).total_seconds() / 1500),     # +$2 over the 25 minutes
+                 "SH": lambda t: 40.0 - 0.2 * max(0.0, (t - t0).total_seconds() / 1500)}
+    for k, v in attrs.items():
+        setattr(b, k, v)
+    cfg = copy.deepcopy(cfg); cfg["account"]["submit_orders"] = live
+    return b, run_intraday.run(b, cfg, clock=clock, sleep=clock.sleep, root=tempfile.gettempdir(), write=False)
+
+
+def test_day_trade():
+    cfg = _cfg()
+    b, out = _intraday(cfg, (15, 5), +0.004)                       # up morning -> buy VOO 15:30, sell 15:55
+    f = b.fills
+    assert out["status"] == "ok" and [x["side"] for x in f] == ["buy", "sell"] and f[0]["symbol"] == "VOO"
+    assert out["entry_time"] == "15:30:00" and out["exit_time"] == "15:55:00"
+    assert f[0]["qty"] == 10 and abs(out["paper_result"] - 20.0) < 1e-6 and b.pos["VOO"] == 0
+    b, out = _intraday(cfg, (15, 5), -0.004)                       # down morning -> the inverse fund
+    assert b.fills[0]["symbol"] == "SH" and out["direction"] == "down" and b.pos["SH"] == 0
+    b, out = _intraday(cfg, (15, 5), +0.004, live=False)           # practice mode: nothing sent, result logged
+    assert not b.fills and out["paper_result"] == 20.0
+    b, out = _intraday(cfg, (15, 45), +0.004)                      # started late -> no trade
+    assert not b.fills and "too late" in out["status"]
+    b, out = _intraday(cfg, (14, 5), +0.004)                       # the other season's schedule -> exits
+    assert not b.fills and "too early" in out["status"]
+    b, out = _intraday(cfg, (15, 5), +0.004, past_pnl=-1000.01)    # 20% of $5,000 lost -> switched off
+    assert not b.fills and "loss limit" in out["status"]
+    b, out = _intraday(cfg, (15, 5), +0.004, cal={"open": "09:30", "close": "13:00"})
+    assert not b.fills and "early close" in out["status"]
+
+
 if __name__ == "__main__":
     test_rsi_extremes(); print("ok  RSI extremes and a hand-worked value")
     test_paper_only_guard(); print("ok  broker refuses any non-paper URL")
     n = test_live_matches_backtest(); print(f"ok  live job reproduces the backtest's pullback trades ({n} trades compared)")
     test_risk_gates(); print("ok  risk gates: position cap, drawdown block, drawdown maths")
     test_halt_file_and_rerun(); print("ok  HALT file stops the desk; a repeat run adds no orders; closed days do nothing")
+    n, g = test_leveraged_and_momentum(); print(f"ok  3x funds trade on the plain fund's signal; momentum picks changed {n} times, only in re-rank weeks; peak invested {g:.0%}")
+    test_day_trade(); print("ok  day trade: up and down signals, practice mode, late and early starts, loss limit, early close")
