@@ -1,0 +1,7 @@
+{
+ "date": "2026-11-11",
+ "piece": "day trade",
+ "mode": "dry-run",
+ "errors": [],
+ "status": "started too late for today's window: no trade"
+}
