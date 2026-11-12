@@ -31,7 +31,8 @@ def write_report(root: str) -> str:
                   f"| Return since first run ({e.index[0].date()}) | {last / first - 1:+.2%} |",
                   f"| Deepest drawdown so far | {dd:.2%} (model's 20-year worst: {MODEL_MAX_DD:.1%}) |",
                   f"| Trading days recorded | {len(e)} |",
-                  f"| Orders sent | {int(eq['orders'].sum())} |", ""]
+                  f"| Orders sent to the broker | {int(eq.loc[eq['mode'] != 'dry-run', 'orders'].sum())} |",
+                  f"| Orders decided in practice mode (not sent) | {int(eq.loc[eq['mode'] == 'dry-run', 'orders'].sum())} |", ""]
         if len(e) >= 63:
             r13 = e.iloc[-1] / e.iloc[-63] - 1
             inside = MODEL_13W["p05"] <= r13 <= MODEL_13W["p95"]

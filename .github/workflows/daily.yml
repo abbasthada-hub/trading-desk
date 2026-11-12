@@ -3,6 +3,8 @@ name: Desk daily run
 on:
   schedule:
     - cron: "30 1 * * 2-6"     # 01:30 UTC Tue-Sat = Mon-Fri evening in New York, after the close
+    - cron: "40 4 * * 2-6"     # backups: GitHub can start scheduled runs hours late or skip one.
+    - cron: "50 8 * * 2-6"     # A repeat run on the same day adds no orders, so extra runs are safe.
   workflow_dispatch: {}        # lets you press "Run workflow" by hand
 
 permissions:
