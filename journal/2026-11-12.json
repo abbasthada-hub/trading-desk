@@ -1,0 +1,8 @@
+{
+ "date": "2026-11-12",
+ "mode": "dry-run",
+ "orders_sent": [],
+ "orders_rejected": [],
+ "errors": [],
+ "status": "the market is open: the nightly job only runs after the close"
+}
