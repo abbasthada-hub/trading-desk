@@ -1,0 +1,62 @@
+{
+ "date": "2026-11-11",
+ "mode": "dry-run",
+ "orders_sent": [],
+ "orders_rejected": [],
+ "errors": [],
+ "weekly_check_reason": "",
+ "data_feed": "sip",
+ "equity": 100000.0,
+ "cash": 100000.0,
+ "drawdown_from_peak": 0.0,
+ "new_buying_blocked": false,
+ "week_end_check": false,
+ "decisions": {
+  "pullback": {
+   "IVV": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 763.08
+   },
+   "QQQ": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 690.38
+   },
+   "IWM": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 283.09
+   },
+   "DIA": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 524.44
+   }
+  },
+  "trend": {
+   "checked": false
+  },
+  "skipped": [],
+  "leveraged": {
+   "UPRO": {
+    "decision": "hold",
+    "signal_from": "IVV",
+    "in_position": false,
+    "days_held": 0
+   },
+   "TQQQ": {
+    "decision": "hold",
+    "signal_from": "QQQ",
+    "in_position": false,
+    "days_held": 0
+   }
+  }
+ },
+ "positions": {},
+ "status": "ok"
+}

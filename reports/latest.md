@@ -1,16 +1,16 @@
 # Desk report
 
-Last run: 2026-11-10 (dry-run)
+Last run: 2026-11-11 (dry-run)
 
 | Measure | Value |
 | --- | --- |
 | Equity | $100,000.00 |
 | Return since first run (2026-11-10) | +0.00% |
 | Deepest drawdown so far | 0.00% (model's 20-year worst: -10.9%) |
-| Trading days recorded | 1 |
+| Trading days recorded | 2 |
 | Orders sent | 4 |
 
-Fewer than 63 trading days recorded, so there is no 13-week comparison yet (1 of 63).
+Fewer than 63 trading days recorded, so there is no 13-week comparison yet (2 of 63).
 
 ## Orders, last 15 runs
 
