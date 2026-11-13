@@ -28,4 +28,4 @@ No day trades logged yet.
 
 ## Things to look at
 
-Nothing flagged.
+- 2026-11-13: the market is open: the nightly job only runs after the close
