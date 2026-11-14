@@ -1,8 +1,154 @@
 {
  "date": "2026-11-13",
  "mode": "dry-run",
- "orders_sent": [],
+ "orders_sent": [
+  {
+   "symbol": "SPY",
+   "qty": 15,
+   "side": "buy",
+   "sleeve": "tr",
+   "reason": "new holding",
+   "client_order_id": "tr-SPY-20261113-buy",
+   "ref_price": 754.37
+  },
+  {
+   "symbol": "EFA",
+   "qty": 47,
+   "side": "buy",
+   "sleeve": "tr",
+   "reason": "new holding",
+   "client_order_id": "tr-EFA-20261113-buy",
+   "ref_price": 104.17
+  },
+  {
+   "symbol": "VNQ",
+   "qty": 120,
+   "side": "buy",
+   "sleeve": "tr",
+   "reason": "new holding",
+   "client_order_id": "tr-VNQ-20261113-buy",
+   "ref_price": 96.47
+  },
+  {
+   "symbol": "DBC",
+   "qty": 378,
+   "side": "buy",
+   "sleeve": "tr",
+   "reason": "new holding",
+   "client_order_id": "tr-DBC-20261113-buy",
+   "ref_price": 30.79
+  }
+ ],
  "orders_rejected": [],
  "errors": [],
- "status": "the market is open: the nightly job only runs after the close"
+ "weekly_check_reason": "week end",
+ "data_feed": "sip",
+ "equity": 100000.0,
+ "cash": 100000.0,
+ "drawdown_from_peak": 0.0,
+ "new_buying_blocked": false,
+ "week_end_check": true,
+ "decisions": {
+  "pullback": {
+   "IVV": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 757.65
+   },
+   "QQQ": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 679.89
+   },
+   "IWM": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 277.54
+   },
+   "DIA": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 523.15
+   }
+  },
+  "trend": {
+   "checked": true,
+   "SPY": {
+    "trend_on": true,
+    "momentum_pick": true,
+    "current_weight": 0.0,
+    "target_weight": 0.1167
+   },
+   "EFA": {
+    "trend_on": true,
+    "momentum_pick": false,
+    "current_weight": 0.0,
+    "target_weight": 0.05
+   },
+   "EEM": {
+    "trend_on": false,
+    "momentum_pick": false,
+    "current_weight": 0.0,
+    "target_weight": 0.0
+   },
+   "VNQ": {
+    "trend_on": true,
+    "momentum_pick": true,
+    "current_weight": 0.0,
+    "target_weight": 0.1167
+   },
+   "IEF": {
+    "trend_on": false,
+    "momentum_pick": false,
+    "current_weight": 0.0,
+    "target_weight": 0.0
+   },
+   "TLT": {
+    "trend_on": false,
+    "momentum_pick": false,
+    "current_weight": 0.0,
+    "target_weight": 0.0
+   },
+   "GLD": {
+    "trend_on": false,
+    "momentum_pick": false,
+    "current_weight": 0.0,
+    "target_weight": 0.0
+   },
+   "DBC": {
+    "trend_on": true,
+    "momentum_pick": true,
+    "current_weight": 0.0,
+    "target_weight": 0.1167
+   }
+  },
+  "skipped": [],
+  "leveraged": {
+   "UPRO": {
+    "decision": "hold",
+    "signal_from": "IVV",
+    "in_position": false,
+    "days_held": 0
+   },
+   "TQQQ": {
+    "decision": "hold",
+    "signal_from": "QQQ",
+    "in_position": false,
+    "days_held": 0
+   }
+  },
+  "momentum": {
+   "holding": [
+    "DBC",
+    "SPY",
+    "VNQ"
+   ]
+  }
+ },
+ "positions": {},
+ "status": "ok"
 }
