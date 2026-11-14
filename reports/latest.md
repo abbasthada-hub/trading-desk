@@ -32,4 +32,4 @@ No day trades logged yet.
 
 ## Things to look at
 
-Nothing flagged.
+- 2026-11-14: market was closed today: nothing to do
