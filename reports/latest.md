@@ -1,17 +1,17 @@
 # Desk report
 
-Last run: 2026-11-13 (dry-run)
+Last run: 2026-11-16 (dry-run)
 
 | Measure | Value |
 | --- | --- |
 | Equity | $100,000.00 |
 | Return since first run (2026-11-10) | +0.00% |
 | Deepest drawdown so far | 0.00% (model's 20-year worst: -10.9%) |
-| Trading days recorded | 4 |
+| Trading days recorded | 5 |
 | Orders sent to the broker | 0 |
-| Orders decided in practice mode (not sent) | 8 |
+| Orders decided in practice mode (not sent) | 10 |
 
-Fewer than 63 trading days recorded, so there is no 13-week comparison yet (4 of 63).
+Fewer than 63 trading days recorded, so there is no 13-week comparison yet (5 of 63).
 
 ## Orders, last 15 runs
 
@@ -25,6 +25,8 @@ Fewer than 63 trading days recorded, so there is no 13-week comparison yet (4 of
 | 2026-11-13 | tr | buy | 47 | EFA | new holding | dry-run |
 | 2026-11-13 | tr | buy | 120 | VNQ | new holding | dry-run |
 | 2026-11-13 | tr | buy | 378 | DBC | new holding | dry-run |
+| 2026-11-16 | pb | buy | 6 | IVV | pullback entry | dry-run |
+| 2026-11-16 | lv | buy | 57 | UPRO | leveraged pullback entry | dry-run |
 
 ## Day-trading piece
 

@@ -1,0 +1,81 @@
+{
+ "date": "2026-11-16",
+ "mode": "dry-run",
+ "orders_sent": [
+  {
+   "symbol": "IVV",
+   "qty": 6,
+   "side": "buy",
+   "sleeve": "pb",
+   "reason": "pullback entry",
+   "client_order_id": "pb-IVV-20261116-buy",
+   "ref_price": 743.33
+  },
+  {
+   "symbol": "UPRO",
+   "qty": 57,
+   "side": "buy",
+   "sleeve": "lv",
+   "reason": "leveraged pullback entry",
+   "client_order_id": "lv-UPRO-20261116-buy",
+   "ref_price": 130.68
+  }
+ ],
+ "orders_rejected": [],
+ "errors": [],
+ "weekly_check_reason": "",
+ "data_feed": "sip",
+ "equity": 100000.0,
+ "cash": 100000.0,
+ "drawdown_from_peak": 0.0,
+ "new_buying_blocked": false,
+ "week_end_check": false,
+ "decisions": {
+  "pullback": {
+   "IVV": {
+    "decision": "enter",
+    "in_position": false,
+    "days_held": 0,
+    "close": 743.33
+   },
+   "QQQ": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 661.75
+   },
+   "IWM": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 272.94
+   },
+   "DIA": {
+    "decision": "hold",
+    "in_position": false,
+    "days_held": 0,
+    "close": 515.68
+   }
+  },
+  "trend": {
+   "checked": false
+  },
+  "skipped": [],
+  "leveraged": {
+   "UPRO": {
+    "decision": "enter",
+    "signal_from": "IVV",
+    "in_position": false,
+    "days_held": 0
+   },
+   "TQQQ": {
+    "decision": "hold",
+    "signal_from": "QQQ",
+    "in_position": false,
+    "days_held": 0
+   }
+  }
+ },
+ "positions": {},
+ "status": "ok"
+}
