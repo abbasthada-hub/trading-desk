@@ -40,3 +40,4 @@ No day trades logged yet.
 ## Things to look at
 
 - 2026-11-14: market was closed today: nothing to do
+- 2026-11-19: the market is open: the nightly job only runs after the close
