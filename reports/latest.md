@@ -1,17 +1,17 @@
 # Desk report
 
-Last run: 2026-11-23 (dry-run)
+Last run: 2026-11-24 (dry-run)
 
 | Measure | Value |
 | --- | --- |
 | Equity | $100,000.00 |
 | Return since first run (2026-11-10) | +0.00% |
 | Deepest drawdown so far | 0.00% (model's 20-year worst: -10.9%) |
-| Trading days recorded | 10 |
+| Trading days recorded | 11 |
 | Orders sent to the broker | 0 |
 | Orders decided in practice mode (not sent) | 18 |
 
-Fewer than 63 trading days recorded, so there is no 13-week comparison yet (10 of 63).
+Fewer than 63 trading days recorded, so there is no 13-week comparison yet (11 of 63).
 
 ## Orders, last 15 runs
 
@@ -44,4 +44,3 @@ No day trades logged yet.
 
 - 2026-11-14: market was closed today: nothing to do
 - 2026-11-21: market was closed today: nothing to do
-- 2026-11-24: the market is open: the nightly job only runs after the close
