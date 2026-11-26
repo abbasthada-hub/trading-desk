@@ -44,3 +44,4 @@ No day trades logged yet.
 
 - 2026-11-14: market was closed today: nothing to do
 - 2026-11-21: market was closed today: nothing to do
+- 2026-11-26: market was closed today: nothing to do
