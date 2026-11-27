@@ -17,10 +17,6 @@ Fewer than 63 trading days recorded, so there is no 13-week comparison yet (12 o
 
 | Date | Sleeve | Side | Shares | Symbol | Why | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2026-11-10 | tr | buy | 15 | SPY | new holding | dry-run |
-| 2026-11-10 | tr | buy | 47 | EFA | new holding | dry-run |
-| 2026-11-10 | tr | buy | 120 | VNQ | new holding | dry-run |
-| 2026-11-10 | tr | buy | 379 | DBC | new holding | dry-run |
 | 2026-11-13 | tr | buy | 15 | SPY | new holding | dry-run |
 | 2026-11-13 | tr | buy | 47 | EFA | new holding | dry-run |
 | 2026-11-13 | tr | buy | 120 | VNQ | new holding | dry-run |
@@ -45,3 +41,5 @@ No day trades logged yet.
 - 2026-11-14: market was closed today: nothing to do
 - 2026-11-21: market was closed today: nothing to do
 - 2026-11-26: market was closed today: nothing to do
+- 2026-11-27: stopped: today's bar is missing for DBC, DIA, EEM, EFA, GLD, IEF, IVV, IWM, QQQ, SH, SPY, TLT, TQQQ, UPRO, VNQ, VOO
+- 2026-11-27: stopped: today's bar is missing for DBC, DIA, EEM, EFA, GLD, IEF, IVV, IWM, QQQ, SH, SPY, TLT, TQQQ, UPRO, VNQ, VOO

@@ -1,0 +1,10 @@
+{
+ "date": "2026-11-27",
+ "mode": "dry-run",
+ "orders_sent": [],
+ "orders_rejected": [],
+ "errors": [
+  "stopped: today's bar is missing for DBC, DIA, EEM, EFA, GLD, IEF, IVV, IWM, QQQ, SH, SPY, TLT, TQQQ, UPRO, VNQ, VOO"
+ ],
+ "status": "stopped: today's bar is missing for DBC, DIA, EEM, EFA, GLD, IEF, IVV, IWM, QQQ, SH, SPY, TLT, TQQQ, UPRO, VNQ, VOO"
+}
