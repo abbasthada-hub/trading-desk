@@ -1,17 +1,17 @@
 # Desk report
 
-Last run: 2026-11-25 (dry-run)
+Last run: 2026-11-27 (dry-run)
 
 | Measure | Value |
 | --- | --- |
 | Equity | $100,000.00 |
 | Return since first run (2026-11-10) | +0.00% |
 | Deepest drawdown so far | 0.00% (model's 20-year worst: -10.9%) |
-| Trading days recorded | 12 |
+| Trading days recorded | 13 |
 | Orders sent to the broker | 0 |
-| Orders decided in practice mode (not sent) | 18 |
+| Orders decided in practice mode (not sent) | 21 |
 
-Fewer than 63 trading days recorded, so there is no 13-week comparison yet (12 of 63).
+Fewer than 63 trading days recorded, so there is no 13-week comparison yet (13 of 63).
 
 ## Orders, last 15 runs
 
@@ -31,6 +31,9 @@ Fewer than 63 trading days recorded, so there is no 13-week comparison yet (12 o
 | 2026-11-20 | tr | buy | 9 | SPY | new holding | dry-run |
 | 2026-11-20 | tr | buy | 72 | VNQ | new holding | dry-run |
 | 2026-11-20 | tr | buy | 227 | DBC | new holding | dry-run |
+| 2026-11-27 | tr | buy | 9 | SPY | new holding | dry-run |
+| 2026-11-27 | tr | buy | 121 | VNQ | new holding | dry-run |
+| 2026-11-27 | tr | buy | 225 | DBC | new holding | dry-run |
 
 ## Day-trading piece
 
@@ -41,5 +44,3 @@ No day trades logged yet.
 - 2026-11-14: market was closed today: nothing to do
 - 2026-11-21: market was closed today: nothing to do
 - 2026-11-26: market was closed today: nothing to do
-- 2026-11-27: stopped: today's bar is missing for DBC, DIA, EEM, EFA, GLD, IEF, IVV, IWM, QQQ, SH, SPY, TLT, TQQQ, UPRO, VNQ, VOO
-- 2026-11-27: stopped: today's bar is missing for DBC, DIA, EEM, EFA, GLD, IEF, IVV, IWM, QQQ, SH, SPY, TLT, TQQQ, UPRO, VNQ, VOO
